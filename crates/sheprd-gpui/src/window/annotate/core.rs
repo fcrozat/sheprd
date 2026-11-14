@@ -116,7 +116,10 @@ impl SheprdWindow {
             return Some(CoreAgent {
                 host: Host::Local,
                 agent: sheprd_core_client::agent_name(info)?,
-                terminal,
+                // The core's address, never the id the window holds: a reused
+                // shell may be held by its name, and delivery matches only
+                // addresses, so the name would silently drop the note.
+                terminal: info.id.clone(),
             });
         }
         let (tab, terminal) = terminals.view_key(view).or_else(|| {

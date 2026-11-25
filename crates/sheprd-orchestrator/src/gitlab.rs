@@ -361,7 +361,7 @@ pub fn sync(
     cancelled: &impl Fn() -> bool,
     cooldown: &mut Option<Duration>,
 ) -> super::Result<Listing> {
-    let agent = agent(&api.host, TIMEOUT);
+    let agent = agent(api, TIMEOUT);
     let credential = Credential::new(api.scheme, token);
     let mut listing = full(
         source,
@@ -495,7 +495,7 @@ pub fn recent_issues(
 ) -> super::Result<Vec<Item>> {
     let url = recent_issues_url((source, api), count)?;
     let nodes: Vec<IssueNode> = get_page(
-        &agent(&api.host, TIMEOUT),
+        &agent(api, TIMEOUT),
         (source, api),
         Credential::new(api.scheme, token),
         url,
@@ -598,16 +598,33 @@ fn get_page<N: Listed>(
     serde_json::from_slice(&body(&mut reply, LIMIT)?).map_err(Error::Json)
 }
 
-/// Whether `host` is gitlab.com, however it is capitalized: a host name is
-/// case-insensitive, and a person types an instance's name themselves.
+/// Whether `host` is gitlab.com, however it is capitalized and whether or
+/// not it names a port: a host name is case-insensitive, and a person types an
+/// instance's name themselves, port included.
+///
+/// The port must not change the answer. Should a `gitlab.com:8443` fall to the
+/// system's store, an authority a proxy installed on the machine could read
+/// the token, which Mozilla's roots alone forbid.
 fn is_gitlab_com(host: &str) -> bool {
-    host.eq_ignore_ascii_case(DEFAULT_HOST)
+    let name = host.rsplit_once(':').map_or(host, |(name, _)| name);
+    name.eq_ignore_ascii_case(DEFAULT_HOST)
 }
 
-/// An agent for the API on `host`, the address a request is dialled at:
-/// bounded by `timeout`, following no redirect, so a token is never carried
-/// to another address, and returning refusals as statuses to read.
-pub(super) fn agent(host: &str, timeout: Duration) -> ureq::Agent {
+/// An agent for `api`'s requests: dialled at the host it maps to, whose
+/// certificate is the one presented, bounded by `timeout`, following no
+/// redirect, so a token is never carried to another address, and returning
+/// refusals as statuses to read.
+pub(super) fn agent(api: &Api, timeout: Duration) -> ureq::Agent {
+    agent_for(&api.host, timeout)
+}
+
+/// An agent for `instance` itself, which the sign-in names where a remote's
+/// API would be read instead.
+pub(super) fn sign_in_agent(instance: &str, timeout: Duration) -> ureq::Agent {
+    agent_for(instance, timeout)
+}
+
+fn agent_for(host: &str, timeout: Duration) -> ureq::Agent {
     ureq::Agent::config_builder()
         .timeout_global(Some(timeout))
         .max_redirects(0)

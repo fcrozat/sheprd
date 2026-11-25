@@ -157,8 +157,8 @@ own URL is `http://`; the shared source key names only the host, so the scheme
 is read from the remote each time.
 
 The certificate of the host requests go to is checked against Mozilla's bundled
-roots on gitlab.com, which therefore reads without a trustworthy store on the
-machine, and against the machine's own store on every other host, since a
+roots on gitlab.com, whatever port it names, which therefore reads without a
+trustworthy store on the machine, and against the machine's own store on every other host, since a
 self-managed instance is usually served by the organization's authority
 (`agent`, `roots` in `gitlab.rs`). A self-managed instance therefore needs the
 store its machine ships with, and a proxy that reissues certificates is

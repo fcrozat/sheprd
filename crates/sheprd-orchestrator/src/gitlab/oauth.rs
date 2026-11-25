@@ -199,7 +199,7 @@ fn post(instance: &str, path: &str, fields: &[(&str, &str)]) -> Result<(u16, Vec
     let url = url::Url::parse(&format!("{origin}/oauth/{path}"))
         .map_err(|_| Error::Address(instance.to_owned()))?;
     // ureq owns the form's buffers; never log the fields or the reply.
-    let mut reply = agent(TIMEOUT.min(Duration::from_secs(15)))
+    let mut reply = agent(instance, TIMEOUT.min(Duration::from_secs(15)))
         .post(url.as_str())
         .header("User-Agent", "Sheprd")
         .header("Accept", "application/json")
